@@ -1,162 +1,128 @@
 import csv
-from io import StringIO
+from collections.abc import Sequence
 from pathlib import Path
-from zipfile import ZipFile
 
 import pytest
 
 from alberta_rent_watch.cmhc import (
-    RENT_ARCHIVE,
     RENT_CSV,
+    TARGET_CITY,
     TARGET_STRUCTURE,
     TARGET_UNIT,
-    VACANCY_ARCHIVE,
     VACANCY_CSV,
     load_cmhc_data,
 )
 
-RENT_COLUMNS = [
-    "REF_DATE",
-    "GEO",
-    "DGUID",
-    "Type of structure",
-    "Type of unit",
-    "VALUE",
-    "STATUS",
-]
-VACANCY_COLUMNS = ["REF_DATE", "GEO", "DGUID", "VALUE", "STATUS"]
+
+def _write_rows(path: Path, rows: list[list[object]]) -> None:
+    with path.open("w", encoding="utf-8", newline="") as destination:
+        csv.writer(destination).writerows(rows)
 
 
-def _write_csv_zip(
+def _write_rent(
     raw_dir: Path,
-    archive_name: str,
-    csv_name: str,
-    columns: list[str],
-    rows: list[list[object]],
+    years: Sequence[int] = (2023, 2024),
+    values: Sequence[object] = (1398, 1529),
+    *,
+    city: str = TARGET_CITY,
 ) -> None:
-    csv_buffer = StringIO()
-    writer = csv.writer(csv_buffer)
-    writer.writerow(columns)
-    writer.writerows(rows)
-    with ZipFile(raw_dir / archive_name, "w") as archive:
-        archive.writestr(csv_name, csv_buffer.getvalue())
-
-
-def _write_sources(
-    raw_dir: Path,
-    rent_rows: list[list[object]],
-    vacancy_rows: list[list[object]],
-    rent_columns: list[str] = RENT_COLUMNS,
-) -> None:
-    _write_csv_zip(raw_dir, RENT_ARCHIVE, RENT_CSV, rent_columns, rent_rows)
-    _write_csv_zip(
-        raw_dir,
-        VACANCY_ARCHIVE,
-        VACANCY_CSV,
-        VACANCY_COLUMNS,
-        vacancy_rows,
+    _write_rows(
+        raw_dir / RENT_CSV,
+        [
+            ["Canada Mortgage and Housing Corporation, average rents"],
+            ["Table: 34-10-0133-01"],
+            [],
+            ["Geography", city, *([""] * (len(years) - 1))],
+            ["Type of unit", TARGET_UNIT, *([""] * (len(years) - 1))],
+            ["Type of structure", *years],
+            ["", "Dollars", *([""] * (len(years) - 1))],
+            [TARGET_STRUCTURE, *values],
+            [],
+            ["Footnotes:"],
+        ],
     )
 
 
-def _rent_row(
-    city: str,
-    value: object,
-    *,
-    year: int = 2024,
-    structure: str = TARGET_STRUCTURE,
-    unit: str = TARGET_UNIT,
-    status: object = None,
-) -> list[object]:
-    return [year, city, f"dguid-{city}", structure, unit, value, status]
+def _write_vacancy(
+    raw_dir: Path,
+    years: Sequence[int] = (2023, 2024),
+    values: Sequence[object] = (2.3, 3.0),
+) -> None:
+    _write_rows(
+        raw_dir / VACANCY_CSV,
+        [
+            ["Canada Mortgage and Housing Corporation, vacancy rates"],
+            ["Table: 34-10-0130-01"],
+            [],
+            ["Geography", *years],
+            ["", "Rate", *([""] * (len(years) - 1))],
+            [TARGET_CITY, *values],
+            [],
+            ["Footnotes:"],
+        ],
+    )
 
 
-def _vacancy_row(
-    city: str, value: object, *, year: int = 2024, status: object = None
-) -> list[object]:
-    return [year, city, f"dguid-{city}", value, status]
-
-
-def test_load_filters_to_target_cities_and_categories(tmp_path: Path) -> None:
-    rent_rows = [
-        _rent_row("Calgary, Alberta", 1876),
-        _rent_row("Edmonton, Alberta", 1536),
-        _rent_row("Calgary, Alberta", 1500, unit="One bedroom units"),
-        _rent_row("Toronto, Ontario", 2000),
-    ]
-    vacancy_rows = [
-        _vacancy_row("Calgary, Alberta", 4.6),
-        _vacancy_row("Edmonton, Alberta", 3.0),
-        _vacancy_row("Toronto, Ontario", 2.0),
-    ]
-    _write_sources(tmp_path, rent_rows, vacancy_rows)
+def test_loads_wide_local_exports_as_long_data(tmp_path: Path) -> None:
+    _write_rent(tmp_path)
+    _write_vacancy(tmp_path)
 
     result = load_cmhc_data(tmp_path)
 
-    assert result.select("year", "city", "average_rent", "vacancy_rate").to_dicts() == [
+    assert result.to_dicts() == [
         {
-            "year": 2024,
-            "city": "Calgary, Alberta",
-            "average_rent": 1876.0,
-            "vacancy_rate": 4.6,
+            "year": 2023,
+            "city": TARGET_CITY,
+            "average_rent": 1398.0,
+            "vacancy_rate": 2.3,
         },
         {
             "year": 2024,
-            "city": "Edmonton, Alberta",
-            "average_rent": 1536.0,
+            "city": TARGET_CITY,
+            "average_rent": 1529.0,
             "vacancy_rate": 3.0,
         },
     ]
 
 
-def test_load_rejects_missing_required_column(tmp_path: Path) -> None:
-    rent_columns = [column for column in RENT_COLUMNS if column != "Type of unit"]
-    rent_row = _rent_row("Calgary, Alberta", 1876)
-    rent_row.pop(RENT_COLUMNS.index("Type of unit"))
-    _write_sources(
-        tmp_path,
-        [rent_row],
-        [_vacancy_row("Calgary, Alberta", 4.6)],
-        rent_columns,
-    )
-
-    with pytest.raises(ValueError, match="Type of unit"):
-        load_cmhc_data(tmp_path)
-
-
-def test_load_rejects_duplicate_city_year(tmp_path: Path) -> None:
-    rent_row = _rent_row("Calgary, Alberta", 1876)
-    _write_sources(
-        tmp_path,
-        [rent_row, rent_row],
-        [_vacancy_row("Calgary, Alberta", 4.6)],
-    )
-
-    with pytest.raises(ValueError, match="duplicate city-year"):
-        load_cmhc_data(tmp_path)
-
-
-def test_load_preserves_suppressed_value_as_null(tmp_path: Path) -> None:
-    _write_sources(
-        tmp_path,
-        [_rent_row("Calgary, Alberta", None, status="F")],
-        [_vacancy_row("Calgary, Alberta", 4.6)],
-    )
+def test_loads_comma_numbers_and_missing_symbols(tmp_path: Path) -> None:
+    _write_rent(tmp_path, values=["1,398", ".."])
+    _write_vacancy(tmp_path, values=["..", 3.0])
 
     result = load_cmhc_data(tmp_path)
 
-    assert result["average_rent"].to_list() == [None]
-    assert result["rent_status"].to_list() == ["F"]
+    assert result["average_rent"].to_list() == [1398.0, None]
+    assert result["vacancy_rate"].to_list() == [None, 3.0]
 
 
-def test_load_rejects_mismatched_city_year_keys(tmp_path: Path) -> None:
-    _write_sources(
-        tmp_path,
-        [
-            _rent_row("Calgary, Alberta", 1876),
-            _rent_row("Edmonton, Alberta", 1536),
-        ],
-        [_vacancy_row("Calgary, Alberta", 4.6)],
-    )
+def test_rejects_wrong_table_for_rent(tmp_path: Path) -> None:
+    _write_vacancy(tmp_path)
+    (tmp_path / VACANCY_CSV).replace(tmp_path / RENT_CSV)
+    _write_vacancy(tmp_path)
 
-    with pytest.raises(ValueError, match="city-year keys do not match"):
+    with pytest.raises(ValueError, match="34-10-0133-01"):
+        load_cmhc_data(tmp_path)
+
+
+def test_rejects_rent_for_wrong_city(tmp_path: Path) -> None:
+    _write_rent(tmp_path, city="Calgary, Alberta")
+    _write_vacancy(tmp_path)
+
+    with pytest.raises(ValueError, match="filtered to Edmonton"):
+        load_cmhc_data(tmp_path)
+
+
+def test_rejects_duplicate_year_columns(tmp_path: Path) -> None:
+    _write_rent(tmp_path, years=[2024, 2024])
+    _write_vacancy(tmp_path)
+
+    with pytest.raises(ValueError, match="duplicate year"):
+        load_cmhc_data(tmp_path)
+
+
+def test_rejects_mismatched_years(tmp_path: Path) -> None:
+    _write_rent(tmp_path)
+    _write_vacancy(tmp_path, years=[2024, 2025])
+
+    with pytest.raises(ValueError, match="years do not match"):
         load_cmhc_data(tmp_path)
