@@ -1,0 +1,29 @@
+﻿"Canada Mortgage and Housing Corporation, average rents for areas with a population of 10,000 and over 1 2 3"
+"Frequency: Annual"
+"Table: 34-10-0133-01 (formerly CANSIM 027-0040)"
+"Release date: 2025-12-17"
+"Geography: Census subdivision, Census metropolitan area, Census agglomeration, Census metropolitan area part, Census agglomeration part"
+""
+""
+
+"Geography","Edmonton, Alberta",,,,,,,,,,,,,,,,,,,,,,,,,
+"Type of unit","Two bedroom units",,,,,,,,,,,,,,,,,,,,,,,,,
+"Type of structure","2000","2001","2002","2003","2004","2005","2006","2007","2008","2009","2010","2011","2012","2013","2014","2015","2016","2017","2018","2019","2020","2021","2022","2023","2024","2025"
+,"Dollars",,,,,,,,,,,,,,,,,,,,,,,,,
+"Row and apartment structures of three units and over","603","657","710","723","729","732","810","964","1,037","1,016","1,020","1,037","1,074","1,144","1,230","1,261","1,232","1,216","1,246","1,258","1,270","1,271","1,303","1,398","1,529","1,598"
+"Row structures of three units and over","619","678","723","735","723","731","828","1,022","1,070","1,020","1,065","1,073","1,103","1,180","1,266","1,280","1,262","1,237","1,247","1,269","1,248","1,282","1,289","1,395","1,424","1,521"
+"Apartment structures of three units and over","601","654","709","722","730","732","808","958","1,034","1,015","1,015","1,034","1,071","1,141","1,227","1,259","1,229","1,215","1,246","1,257","1,272","1,270","1,304","1,398","1,536","1,603"
+"Apartment structures of six units and over","601","654","709","722","730","732","808","958","1,035","1,016","1,015","1,034","1,072","1,141","1,228","1,260","1,230","1,215","1,247","1,258","1,273","1,271","1,305","1,398","1,536","1,603"
+
+
+
+
+Footnotes:
+1,"Geographical areas modified every 5 years to reflect most recent census definitions, therefore, data are not strictly comparable historically."
+2,"These data are obtained from Canada Mortgage and Housing Corporation (CMHC) and are provided subject to <a href="https://www.cmhc-schl.gc.ca/about-us/terms-conditions/hmip-terms-conditions" rel="external noopener noreferrer" target="_blank"> CMHC Licence Agreement for the Use of Data (opens new window)</a>."
+3,"For additional information and definitions, refer to <a href="https://www.cmhc-schl.gc.ca/professionals/housing-markets-data-and-research/housing-research/surveys/methods/methodology-rental-market-survey" rel="external noopener noreferrer" target="_blank">CMHC Rental Market Survey Methodology and Definitions (opens new window)</a>."
+
+
+
+"How to cite: Statistics Canada. Table 34-10-0133-01  Canada Mortgage and Housing Corporation, average rents for areas with a population of 10,000 and over"
+https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3410013301
