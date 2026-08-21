@@ -2,11 +2,12 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import cmhc
+from . import cmhc, summary
 
 
 def export_dashboard_data(raw_dir: Path, output_path: Path) -> None:
-    records = cmhc.load_cmhc_data(raw_dir).to_dicts()
+    data = cmhc.load_cmhc_data(raw_dir)
+    records = data.to_dicts()
     metadata = {
         "source": "CMHC tables distributed through Statistics Canada",
         "rent_table": cmhc.RENT_TABLE, "vacancy_table": cmhc.VACANCY_TABLE,
@@ -16,6 +17,10 @@ def export_dashboard_data(raw_dir: Path, output_path: Path) -> None:
         "average_rent_unit": "CAD per month", "vacancy_rate_unit": "percent",
         "generated_date": datetime.now(timezone.utc).date().isoformat(),
     }
-    payload = {"metadata": metadata, "records": records}
+    payload = {
+        "metadata": metadata,
+        "rent_summary": summary.derive_current_rent_summary(data),
+        "records": records,
+    }
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")

@@ -13,6 +13,13 @@
     "vacancy_rate_unit": "percent",
     "generated_date": "2026-08-21"
   },
+  "rent_summary": {
+    "latest_year": 2025,
+    "latest_rent": 1598.0,
+    "change_from_prior_year": 69.0,
+    "change_since_2020": 328.0,
+    "change_since_2000": 995.0
+  },
   "records": [
     {
       "year": 2000,
