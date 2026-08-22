@@ -20,7 +20,8 @@ try:
     payload = json.loads(DATA_PATH.read_text(encoding="utf-8"))
     records = payload["records"]
     years = [record["year"] for record in records]
-    city = payload["metadata"]["geography"].split(",")[0]
+    metadata = payload["metadata"]
+    city = metadata["geography"].split(",")[0]
     summary = payload["rent_summary"]
 except (OSError, KeyError, TypeError, ValueError) as error:
     st.error(f"Dashboard data could not be loaded: {error}")
@@ -45,4 +46,12 @@ else:
     st.write(
         f"**Change since 2000:** "
         f"{format_change(summary['change_since_2000'])} per month"
+    )
+    st.divider()
+    st.caption(f"Source: {metadata['source']}.")
+    st.caption(
+        f"Scope: {metadata['geography']}; {metadata['frequency']} "
+        f"{metadata['unit_type'].lower()} in "
+        f"{metadata['structure_type'].lower()}, "
+        f"{metadata['year_start']}–{metadata['year_end']}."
     )
