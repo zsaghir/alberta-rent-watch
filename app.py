@@ -47,6 +47,31 @@ else:
         f"**Change since 2000:** "
         f"{format_change(summary['change_since_2000'])} per month"
     )
+    st.subheader("Average monthly rent over time")
+    chart_records = [
+        {**record, "rent_change": None if index == 0 else
+         record["average_rent"] - records[index - 1]["average_rent"]}
+        for index, record in enumerate(records)
+    ]
+    st.vega_lite_chart(chart_records, {
+        "mark": {"type": "line", "point": True},
+        "encoding": {
+            "x": {"field": "year", "type": "ordinal", "title": "Year"},
+            "y": {"field": "average_rent", "type": "quantitative", "title": "Average monthly rent (CAD)"},
+            "tooltip": [
+                {"field": "year", "type": "ordinal", "title": "Year"},
+                {"field": "average_rent", "type": "quantitative", "format": "$,.0f", "title": "Average rent (CAD/month)"},
+                {"field": "rent_change", "type": "quantitative", "format": "+$,.0f", "title": "Change from prior year (CAD/month)"},
+                {"field": "vacancy_rate", "type": "quantitative", "format": ".1f", "title": "Vacancy rate (%)"},
+            ],
+        }})
+    with st.expander("Accessible chart data (rent/change in CAD per month; vacancy in percent)"):
+        st.dataframe(chart_records, hide_index=True)
+    st.caption(
+        f"Text summary: Average rent was ${records[0]['average_rent']:,.0f} "
+        f"in {records[0]['year']} and ${records[-1]['average_rent']:,.0f} "
+        f"in {records[-1]['year']}."
+    )
     st.divider()
     st.caption(f"Source: {metadata['source']}.")
     st.caption(
