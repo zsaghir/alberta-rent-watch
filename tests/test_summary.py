@@ -5,7 +5,7 @@ import pytest
 from alberta_rent_watch.cmhc import load_cmhc_data
 from alberta_rent_watch.summary import derive_current_rent_summary
 
-RAW_DIR = Path(__file__).parents[1] / "src/alberta_rent_watch/data/raw/cmhc"
+RAW_DIR = Path(__file__).parents[1] / "data/raw"
 
 
 def test_derives_current_rent_summary() -> None:

@@ -1,0 +1,31 @@
+﻿"Population estimates, July 1, by census metropolitan area and census agglomeration, 2021 boundaries 1 2 3 4 5 6 7"
+"Frequency: Annual"
+"Table: 17-10-0148-01"
+"Release date: 2026-01-14"
+"Geography: Canada, Census metropolitan area, Census agglomeration, Census metropolitan area part, Census agglomeration part"
+""
+""
+
+"Gender","Total - gender",,,,,,,,,,,,,,,,,,,,,,,,
+"Age group 8","All ages",,,,,,,,,,,,,,,,,,,,,,,,
+"Geography","2001","2002","2003","2004","2005","2006","2007","2008","2009","2010","2011","2012","2013","2014","2015","2016","2017","2018","2019","2020","2021","2022","2023","2024","2025"
+,"Persons",,,,,,,,,,,,,,,,,,,,,,,,
+"Edmonton (CMA), Alberta","963,062","985,447","1,001,813","1,018,099","1,043,043","1,074,457","1,104,768","1,132,225","1,163,778","1,184,330","1,205,356","1,233,817","1,271,425","1,311,944","1,341,040","1,364,673","1,388,606","1,412,415","1,438,636","1,461,697","1,472,402","1,500,864","1,560,830","1,641,668","1,692,385"
+
+
+
+
+Footnotes:
+1,"Population estimates based on the Standard Geographical Classification (SGC) 2021 as delineated in the 2021 Census."
+2,"A census metropolitan area (CMA) or a census agglomeration (CA) is formed by one or more adjacent municipalities centred on a population centre (known as the core). A CMA must have a total population of at least 100,000, based on data from the current Census of Population Program, of which 50,000 or more must live in the core based on adjusted data from the previous Census of Population Program. A CA must have a core population of at least 10,000 also based on data from the previous Census of Population Program. To be included in the CMA or CA, other adjacent municipalities must have a high degree of integration with the core, as measured by commuting flows derived from data on place of work from the previous Census Program. If the population of the core of a CA falls below 10,000, the CA is retired from the next census. However, once an area becomes a CMA, it is retained as a CMA even if its total population declines below 100,000 or the population of its core falls below 50,000. All areas inside the CMA or CA that are not population centres are rural areas. When a CA has a core of at least 50,000, based on data from the previous Census of Population, it is subdivided into census tracts. Census tracts are maintained for the CA even if the population of the core subsequently falls below 50,000. All CMAs are subdivided into census tracts (2021 Census Dictionary, catalogue number 98-301-X2021001)."
+3,"An area outside census metropolitan areas and census agglomerations is made up of all areas (within a province or territory) unallocated to a census metropolitan area (CMA) or census agglomeration (CA)."
+4,"Postcensal estimates are based on the latest census counts adjusted for census net undercoverage (including adjustment for incompletely enumerated reserves and settlements) and for the estimated population growth that occurred since that census. Intercensal estimates are based on postcensal estimates and census counts adjusted of the censuses preceding and following the year in consideration."
+5,"Population estimates as of July 1 are final intercensal up to 2020, final postcensal for 2021, updated postcensal for 2022 to 2024, and preliminary postcensal for 2025."
+6,"The population growth, which is used to calculate population estimates of census metropolitan areas and census agglomerations (table 17100148), is comprised of the components of population growth (table 17100149)."
+7,"This table replaces table 17100135."
+8,"Age on July 1."
+
+
+
+"How to cite: Statistics Canada. Table 17-10-0148-01  Population estimates, July 1, by census metropolitan area and census agglomeration, 2021 boundaries"
+https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1710014801

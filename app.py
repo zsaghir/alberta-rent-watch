@@ -3,9 +3,7 @@ from pathlib import Path
 
 import streamlit as st
 
-DATA_PATH = Path(__file__).parent / (
-    "src/alberta_rent_watch/data/processed/dashboard.json"
-)
+DATA_PATH = Path(__file__).parent / "data/website/edmonton_2br_history.json"
 
 
 def format_change(value: float) -> str:

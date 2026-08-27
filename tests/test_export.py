@@ -3,7 +3,7 @@ from pathlib import Path
 
 from alberta_rent_watch.export import export_dashboard_data
 
-RAW_DIR = Path(__file__).parents[1] / "src/alberta_rent_watch/data/raw/cmhc"
+RAW_DIR = Path(__file__).parents[1] / "data/raw"
 FIELDS = {"year", "city", "average_rent", "vacancy_rate"}
 
 

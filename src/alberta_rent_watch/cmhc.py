@@ -7,8 +7,8 @@ from pathlib import Path
 
 import polars as pl
 
-RENT_CSV = "cmhc_average_rent_2000_2025.csv"
-VACANCY_CSV = "cmhc_vacancy_rate_2000_2025.csv"
+RENT_CSV = "cmhc_rent.csv"
+VACANCY_CSV = "cmhc_vacancy.csv"
 
 RENT_TABLE = "34-10-0133-01"
 VACANCY_TABLE = "34-10-0130-01"
