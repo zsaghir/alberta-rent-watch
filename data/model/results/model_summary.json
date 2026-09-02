@@ -1,0 +1,25 @@
+{
+  "selected_model": "linear_regression",
+  "test_mae": 62.06,
+  "test_rmse": 65.8,
+  "test_r2": 0.669,
+  "coefficients": {
+    "rent_lag1": 1.0412,
+    "vacancy_lag1": -13.8905
+  },
+  "intercept": 46.2515,
+  "validation": {
+    "baseline_mae": 8.33,
+    "linear_regression_mae": 8.18
+  },
+  "test_years": [
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "forecast": {
+    "year": 2026,
+    "predicted_rent": 1657.29
+  }
+}
