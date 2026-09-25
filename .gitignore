@@ -10,3 +10,5 @@ wheels/
 .venv
 
 private/
+# Local work report (not for publishing)
+WORK_REPORT.md

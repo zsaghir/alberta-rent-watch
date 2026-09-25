@@ -1,2 +1,1 @@
-def main() -> None:
-    print("Hello from alberta-rent-watch!")
+"""Load, summarize, and export Edmonton rental-market data."""

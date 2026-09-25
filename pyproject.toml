@@ -1,8 +1,10 @@
 [project]
 name = "alberta-rent-watch"
 version = "0.1.0"
-description = "Add your description here"
+description = "Analyze and forecast Edmonton rental-market conditions using public CMHC and Statistics Canada data."
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     { name = "zsaghir", email = "zsaghir@ualberta.ca" }
 ]
@@ -15,9 +17,6 @@ dependencies = [
     "scikit-learn>=1.6.1",
     "streamlit>=1.50.0",
 ]
-
-[project.scripts]
-alberta-rent-watch = "alberta_rent_watch:main"
 
 [build-system]
 requires = ["uv_build>=0.12.5,<0.13.0"]

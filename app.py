@@ -66,8 +66,8 @@ else:
     with st.expander("Accessible chart data (rent/change in CAD per month; vacancy in percent)"):
         st.dataframe(chart_records, hide_index=True)
     st.caption(
-        f"Text summary: Average rent was ${records[0]['average_rent']:,.0f} "
-        f"in {records[0]['year']} and ${records[-1]['average_rent']:,.0f} "
+        f"Text summary: Average rent was \\${records[0]['average_rent']:,.0f} "
+        f"in {records[0]['year']} and \\${records[-1]['average_rent']:,.0f} "
         f"in {records[-1]['year']}."
     )
     st.divider()
