@@ -55,14 +55,15 @@ The main research question is whether public rental, population, economic, and h
 |---|---|---|
 | Raw data collection (rent, vacancy, population, unemployment) | Done | Four Statistics Canada CSV exports in `data/raw/` |
 | CMHC loader (wide CSV to tidy rows, with validation) | Done | `src/alberta_rent_watch/cmhc.py` |
+| Population and unemployment loaders | Done | Validated annual Edmonton CMA series in `statcan.py` |
 | Canonical master dataset | Done | `data/processed/edmonton_2br_master.csv` (26 rows) |
 | Dashboard JSON export with rent summary | Done | `data/website/edmonton_2br_history.json` |
 | Streamlit dashboard (headline, comparisons, interactive chart, data table, source text) | Done | `app.py` |
 | Model-ready dataset with lag features | Done | `data/model/edmonton_2br_model.csv` (25 rows) |
 | Model training, selection, testing, and 2026 forecast | Done | `src/models/train_model.py` and `data/model/results/` |
 | Notebooks | Done | Data checking, EDA, and forecasting notebooks all run from a fresh kernel with outputs saved |
-| Automated tests | Done | 37 tests pass, and CI runs them with `ruff` on every push |
-| Population and unemployment used as model features | Not started | Collected, but not joined to the master dataset yet |
+| Automated tests | Done | 62 tests pass, and CI runs them with `ruff` on every push |
+| Population and unemployment used as model features | Not started | Joined to the master dataset; economic model features are next |
 | Forecast shown in the dashboard | Not started | Dashboard shows history only |
 | Calgary coverage | Not started | Calgary vacancy data is already in the raw vacancy file |
 | Static website | Planned | `website/` is reserved for a future static site |
@@ -98,16 +99,25 @@ All data comes from **Statistics Canada** tables, downloaded as CSV into `data/r
 
 ### Canonical master dataset
 
-`data/processed/edmonton_2br_master.csv` has 26 rows, one per year, with no missing values.
+`data/processed/edmonton_2br_master.csv` has 26 rows (2000–2025), one per year. Rent and vacancy are complete. Population is null in 2000; unemployment is null in 2000–2010 because those years are outside the supplied exports. Nulls are not zeros and are not imputed.
 
 | Column | Type | Unit | Range |
 |---|---|---|---|
 | `year` | int | – | 2000 to 2025 |
 | `average_rent` | float | CAD per month | $603 (2000) to $1,598 (2025) |
 | `vacancy_rate` | float | percent | 0.9% (2001) to 7.1% (2016) |
+| `population` | nullable integer | persons | 2001–2025; all ages, total gender, Edmonton CMA |
+| `unemployment_rate` | nullable float | percent | 2011–2025; age 15+, total gender, Edmonton CMA |
+
+**Source timing and comparability.** Population comes from table **17-10-0148-01**, released **January 14, 2026**, and measures population as of **July 1**. Unemployment comes from table **14-10-0461-01**, released **January 9, 2026**, and is an **annual** labour-force rate. The year column is the observation year, not the publication year.
+
+The population export uses 2021 CMA boundaries: estimates through 2020 are final intercensal, 2021 is final postcensal, 2022–2024 are updated postcensal, and 2025 is preliminary postcensal. The unemployment export also uses 2021 CMA boundaries for its supplied history. CMHC geography definitions can change over time, so joining Edmonton series by year does not guarantee perfectly consistent historical boundaries.
+
+These are current data exports, including revisions; they do not establish what was available at each historical forecast date. Later modelling must distinguish analysis using revised data from a real-time backtest.
+
 
 <details>
-<summary>Full master dataset (26 rows)</summary>
+<summary>Rent and vacancy history (26 rows; economic columns are in the master CSV)</summary>
 
 | Year | Avg rent (CAD) | Vacancy (%) | | Year | Avg rent (CAD) | Vacancy (%) |
 |---|---|---|---|---|---|---|
@@ -134,7 +144,7 @@ All data comes from **Statistics Canada** tables, downloaded as CSV into `data/r
 - `rent_lag1`: last year's average rent
 - `vacancy_lag1`: last year's vacancy rate
 
-The first year (2000) has no previous year, so it is dropped. That leaves **25 rows (2001–2025)**. Using lagged inputs means each prediction only uses information that was available at the start of the year being predicted, so there is no look-ahead leakage.
+The first year (2000) has no previous year, so it is dropped. That leaves **25 rows (2001–2025)**. Lagged inputs use prior observation years. This alone does not establish real-time availability: publication dates and subsequent revisions must also be considered.
 
 ---
 
@@ -173,12 +183,23 @@ Statistics Canada CSV exports are "wide": the file starts with title and metadat
 
 ### 2. Master dataset (`src/data/build_master.py`)
 
-This step takes the columns `year`, `average_rent`, and `vacancy_rate`, casts their types, sorts by year, and runs `validate_master()`. The validation checks that:
+This step loads rent and vacancy, then loads the two economic series through `alberta_rent_watch.statcan`. The economic loaders validate table IDs, annual frequency, Edmonton geography, demographic filters, units, year coverage, and numeric values.
 
-- the columns are exactly as expected
-- there are exactly 26 rows with unique, consecutive years from 2000 to 2025
-- there are no missing rent or vacancy values
-- rent is greater than 0 and vacancy is between 0 and 100
+Population and unemployment are **left-joined by year** with one-to-one key validation, retaining all 26 rental observations. `validate_master()` checks:
+
+- exact column names, order, and types
+- unique, consecutive years from 2000 through 2025
+- complete rent and vacancy, finite values, positive rent and population, and rates between 0 and 100
+- population completeness from 2001 and unemployment completeness from 2011
+- null economic values before each source's coverage begins
+
+A missing observation inside coverage raises an error before writing the CSV. Rebuild with:
+
+```bash
+uv run python src/data/build_master.py
+```
+
+The existing feature builder still explicitly selects rent and vacancy; adding economic columns does not change the committed model dataset or forecast. Economic growth and lag features belong to the next milestone.
 
 ### 3. Dashboard export (`src/alberta_rent_watch/export.py`, `summary.py`)
 
@@ -369,7 +390,7 @@ alberta-rent-watch/
 ├── scripts/
 │   └── make_readme_charts.py      Regenerates the charts in docs/images/
 ├── docs/images/                   README figures and dashboard screenshot
-├── tests/                         pytest suite (37 tests)
+├── tests/                         pytest suite (62 tests)
 └── website/                       Reserved for a future static site
 ```
 
@@ -435,14 +456,15 @@ To update the data, download new CSVs from the Statistics Canada tables listed a
 ## Tests and quality checks
 
 ```bash
-uv run pytest -q          # 37 passed
+uv run pytest -q          # 62 passed
 uv run ruff check .       # All checks passed (includes notebooks)
 ```
 
 | Test file | What it covers |
 |---|---|
 | `test_cmhc.py` | Converting wide CSVs to tidy rows, `1,398` and `..` values, wrong table ID, wrong city, duplicate years, mismatched years |
-| `test_build_master.py` | Exact schema, 26 rows, first and last rows, CSV round-trip, rejection of missing, zero, and out-of-range values |
+| `test_build_master.py` | Five-column schema, 26 rows, unchanged rental history, economic coverage gaps, one-to-one joins, missing observations, and invalid values |
+| `test_statcan.py` | Economic exports, source selections, units, duplicate years, invalid numbers, and suppression handling |
 | `test_summary.py` | Exact values for the 2025 summary; an error is raised if the 2020 comparison year is missing |
 | `test_export.py` | 26 unique ordered records, fixed field set, boundary values, metadata units |
 | `test_build_model_data.py` | Lag values in chronological order, missing columns, duplicate or missing years, rebuilding the committed model CSV byte for byte |
@@ -451,7 +473,14 @@ uv run ruff check .       # All checks passed (includes notebooks)
 
 **Continuous integration:** `.github/workflows/ci.yml` runs on every push to `main` and on every pull request. It installs uv, runs `uv sync --locked` (which fails if `uv.lock` is out of date), then `ruff check .` and `pytest`.
 
-**Verification (2026-09-24):**
+**Data-integration verification (2026-10-16):**
+
+- 62 tests pass, including the dashboard smoke test and byte-for-byte model-data compatibility.
+- Ruff checks pass.
+- The five-column master rebuild is reproducible; rent and vacancy match the previous committed dataset exactly.
+- Retraining reproduces the committed forecast summary and test predictions byte for byte.
+
+**Earlier verification (2026-09-24):**
 
 - `uv run pytest -q`: 37 passed.
 - `uv run ruff check .`: all checks passed.
@@ -473,7 +502,7 @@ uv run ruff check .       # All checks passed (includes notebooks)
 
 ## Roadmap
 
-- Join **population** and **unemployment** into the master dataset and test whether they improve accuracy compared with the current model
+- Engineer population-growth and unemployment lag features from the integrated master dataset, then test whether they improve accuracy compared with the current model
 - Add prediction intervals and walk-forward (rolling-origin) validation
 - Show the 2026 forecast and model accuracy in the Streamlit dashboard
 - Extend to **Calgary**. Vacancy data is already collected, and rent needs a matching export

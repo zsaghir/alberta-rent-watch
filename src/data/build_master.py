@@ -5,6 +5,7 @@ from pathlib import Path
 import polars as pl
 
 from alberta_rent_watch.cmhc import load_cmhc_data
+from alberta_rent_watch.statcan import load_population, load_unemployment
 
 PROJECT_ROOT = Path(__file__).parents[2]
 RAW_DIR = PROJECT_ROOT / "data" / "raw"
@@ -17,9 +18,19 @@ EXPECTED_ROW_COUNT = LAST_YEAR - FIRST_YEAR + 1
 
 def validate_master(master: pl.DataFrame) -> None:
     """Check that the master dataset is complete and internally consistent."""
-    expected_columns = ["year", "average_rent", "vacancy_rate"]
+    expected_schema = {
+        "year": pl.Int64,
+        "average_rent": pl.Float64,
+        "vacancy_rate": pl.Float64,
+        "population": pl.Int64,
+        "unemployment_rate": pl.Float64,
+    }
+    expected_columns = list(expected_schema)
     if master.columns != expected_columns:
         raise ValueError(f"Unexpected master columns: {master.columns}")
+
+    if master.schema != expected_schema:
+        raise ValueError(f"Unexpected master column types: {master.schema}")
 
     if master.height != EXPECTED_ROW_COUNT:
         raise ValueError(
@@ -41,6 +52,32 @@ def validate_master(master: pl.DataFrame) -> None:
 
     if master["vacancy_rate"].null_count() > 0:
         raise ValueError("The master dataset contains missing vacancy values")
+
+    for column in ("average_rent", "vacancy_rate", "population", "unemployment_rate"):
+        if not master[column].drop_nulls().is_finite().all():
+            raise ValueError(f"{column} must contain only finite values")
+
+    for column, first_year in (("population", 2001), ("unemployment_rate", 2011)):
+        covered = master.filter(pl.col("year") >= first_year)
+        missing_years = covered.filter(pl.col(column).is_null())["year"].to_list()
+        if missing_years:
+            raise ValueError(
+                f"Missing {column} values within coverage: {missing_years}"
+            )
+        if (
+            master.filter(pl.col("year") < first_year)[column].null_count()
+            != first_year - FIRST_YEAR
+        ):
+            raise ValueError(f"{column} must be null before {first_year}")
+
+    if (master["population"].drop_nulls() <= 0).any():
+        raise ValueError("Population must be greater than zero")
+
+    invalid_unemployment = (master["unemployment_rate"] < 0) | (
+        master["unemployment_rate"] > 100
+    )
+    if invalid_unemployment.any():
+        raise ValueError("Unemployment rate must be between 0 and 100")
 
     if (master["average_rent"] <= 0).any():
         raise ValueError("Average rent must be greater than zero")
@@ -64,6 +101,8 @@ def build_master(
             pl.col("average_rent").cast(pl.Float64),
             pl.col("vacancy_rate").cast(pl.Float64),
         )
+        .join(load_population(raw_dir), on="year", how="left", validate="1:1")
+        .join(load_unemployment(raw_dir), on="year", how="left", validate="1:1")
         .sort("year")
     )
 
