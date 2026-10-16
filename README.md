@@ -62,8 +62,8 @@ The main research question is whether public rental, population, economic, and h
 | Model-ready dataset with lag features | Done | `data/model/edmonton_2br_model.csv` (25 rows) |
 | Model training, selection, testing, and 2026 forecast | Done | `src/models/train_model.py` and `data/model/results/` |
 | Notebooks | Done | Data checking, EDA, and forecasting notebooks all run from a fresh kernel with outputs saved |
-| Automated tests | Done | 62 tests pass, and CI runs them with `ruff` on every push |
-| Population and unemployment used as model features | Not started | Joined to the master dataset; economic model features are next |
+| Automated tests | Done | 79 tests pass, and CI runs them with `ruff` on every push |
+| Population and unemployment used as model features | Done (experiment) | Five candidates compared on shared years; original production forecast retained |
 | Forecast shown in the dashboard | Not started | Dashboard shows history only |
 | Calgary coverage | Not started | Calgary vacancy data is already in the raw vacancy file |
 | Static website | Planned | `website/` is reserved for a future static site |
@@ -94,8 +94,8 @@ All data comes from **Statistics Canada** tables, downloaded as CSV into `data/r
 |---|---|---|---|---|
 | `cmhc_rent.csv` | [34-10-0133-01](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3410013301) | Average rent, Edmonton, two-bedroom units, by structure type (row and apartment, row only, apartment 3+, apartment 6+) | 2000–2025, released 2025-12-17 | Yes (row and apartment, 3+ units) |
 | `cmhc_vacancy.csv` | [34-10-0130-01](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3410013001) | Vacancy rate for row and apartment structures with 3+ units, **all Canadian CMAs**, including Edmonton and Calgary | 1992–2025, released 2025-12-17 | Yes (Edmonton, 2000–2025) |
-| `statcan_population.csv` | [17-10-0148-01](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1710014801) | Population estimates as of July 1, Edmonton CMA, 2021 boundaries | 2001–2025, released 2026-01-14 | Not yet |
-| `statcan_unemployment.csv` | [14-10-0461-01](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410046101) | Unemployment rate, Edmonton CMA, age 15+ | 2011–2025, released 2026-01-09 | Not yet |
+| `statcan_population.csv` | [17-10-0148-01](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1710014801) | Population estimates as of July 1, Edmonton CMA, 2021 boundaries | 2001–2025, released 2026-01-14 | Economic experiment only |
+| `statcan_unemployment.csv` | [14-10-0461-01](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410046101) | Unemployment rate, Edmonton CMA, age 15+ | 2011–2025, released 2026-01-09 | Economic experiment only |
 
 ### Canonical master dataset
 
@@ -199,7 +199,7 @@ A missing observation inside coverage raises an error before writing the CSV. Re
 uv run python src/data/build_master.py
 ```
 
-The existing feature builder still explicitly selects rent and vacancy; adding economic columns does not change the committed model dataset or forecast. Economic growth and lag features belong to the next milestone.
+The existing feature builder still explicitly selects rent and vacancy; adding economic columns does not change the committed model dataset or forecast. A separate economic dataset now includes growth and lag features for the fixed-split comparison below.
 
 ### 3. Dashboard export (`src/alberta_rent_watch/export.py`, `summary.py`)
 
@@ -243,7 +243,7 @@ Vacancy ranged from **0.9% (2001)** to **7.1% (2016)**. It peaked during soft pe
 - **Population** grew from 0.96M (2001) to **1.69M (2025)**. Growth sped up after 2022, adding about 50K to 80K people per year from 2023 to 2025, which lines up with the latest rent surge.
 - **Unemployment** peaked at **11.9% in 2020** and was 7.7% in 2025. This series only starts in 2011, so adding it would cut the model's training history by about ten years.
 
-These two series are the obvious next features to try (see [Roadmap](#roadmap)).
+Both series are now tested in the economic regression experiment below.
 
 ---
 
@@ -390,7 +390,7 @@ alberta-rent-watch/
 ├── scripts/
 │   └── make_readme_charts.py      Regenerates the charts in docs/images/
 ├── docs/images/                   README figures and dashboard screenshot
-├── tests/                         pytest suite (62 tests)
+├── tests/                         pytest suite (79 tests)
 └── website/                       Reserved for a future static site
 ```
 
@@ -456,7 +456,7 @@ To update the data, download new CSVs from the Statistics Canada tables listed a
 ## Tests and quality checks
 
 ```bash
-uv run pytest -q          # 62 passed
+uv run pytest -q          # 79 passed
 uv run ruff check .       # All checks passed (includes notebooks)
 ```
 
@@ -469,6 +469,7 @@ uv run ruff check .       # All checks passed (includes notebooks)
 | `test_export.py` | 26 unique ordered records, fixed field set, boundary values, metadata units |
 | `test_build_model_data.py` | Lag values in chronological order, missing columns, duplicate or missing years, rebuilding the committed model CSV byte for byte |
 | `test_app.py` | The dashboard runs with no exception or error, shows the $1,598 headline, and renders the text summary with escaped dollar signs |
+| `test_economic_models.py` | Economic features, fixed-split comparison, validation-only selection, reproducibility, and original model compatibility |
 | `test_train_model.py` | Importing the module has no side effects; results are finite and complete; model selection works on synthetic data where the regression should win and where the baseline should win; input validation; saved JSON and CSV contracts; null coefficients for the baseline |
 
 **Continuous integration:** `.github/workflows/ci.yml` runs on every push to `main` and on every pull request. It installs uv, runs `uv sync --locked` (which fails if `uv.lock` is out of date), then `ruff check .` and `pytest`.
@@ -500,9 +501,80 @@ uv run ruff check .       # All checks passed (includes notebooks)
 - **Systematic under-prediction in fast markets.** A one-year-lag linear model reacts late to sudden shifts in demand, such as the 2023–2024 surge.
 - **No uncertainty range.** The 2026 forecast is a single number with no prediction interval.
 
+
+## Economic regression experiment
+
+This experiment asks whether population growth and unemployment improve predictions **on identical training and evaluation years**. It is separate from the original longer-history regression and does not replace its forecast or dashboard.
+
+### Features and commands
+
+Run from the repository root:
+
+```bash
+uv run python src/data/build_model_data.py
+uv run python src/models/train_economic_models.py
+```
+
+The first command builds both the unchanged 25-row original dataset and `data/model/edmonton_2br_economic_model.csv` (14 rows, 2012–2025). The economic CSV contains year, average rent, vacancy rate, population, unemployment rate, population growth, and four lagged predictors.
+
+Population growth is `100 × (population / previous_population − 1)`, with no missing-value filling. Growth is calculated before shifting. Predicting rent in 2025 therefore uses 2024 rent, vacancy and unemployment, plus population growth from 2023 to 2024. Unemployment starts in 2011, making 2012 the first complete prediction year. Missing observations inside coverage cause errors instead of silently shortening the experiment.
+
+### Evaluation and findings
+
+All five candidates use the same **seven training rows (2012–2018)** and **three validation rows (2019–2021)**. Lowest validation MAE determines selection; exact ties prefer fewer inputs, then the declared model order. Every regression is then refitted once on 2012–2021 and evaluated on the same four years, 2022–2025, without test-period retraining.
+
+| Candidate | Validation MAE | Test MAE | Test RMSE | Test R² | Test MAE improvement vs matching-period regression |
+|---|---:|---:|---:|---:|---:|
+| **Naive baseline (validation-selected)** | **$8.33** | **$81.75** | $89.40 | 0.388 | +9.08% |
+| Existing rent + vacancy regression | $11.98 | $89.91 | $95.50 | 0.302 | 0.00% |
+| Add population growth | $63.72 | $83.75 | $87.81 | 0.410 | +6.85% |
+| Add unemployment | $93.73 | $90.55 | $96.03 | 0.294 | −0.71% |
+| Add both economic predictors | $66.75 | $84.12 | $89.12 | 0.392 | +6.44% |
+
+Population growth reduced test MAE relative to the regression fitted on the same shorter history. Unemployment alone increased it slightly. Combining the variables also reduced test MAE relative to that regression, but **none of the regressions beat the naive baseline on test MAE**, and all economic candidates performed worse on validation. The baseline remains the validation-selected candidate; test results do not change that decision.
+
+The original model's published **$62.06 test MAE** comes from a longer training history. It remains a separate benchmark, not the reference for attributing improvements to new variables in this experiment.
+
+### Conclusion and why we reached it
+
+**The current experiment does not justify replacing the original model with an economic regression.** Population growth offers a modest improvement over the matching-period rent-and-vacancy regression, but that improvement is not consistent across validation and test periods. Unemployment alone has not demonstrated additional predictive value in this setup. This does not establish that either variable is economically irrelevant.
+
+The evidence behind this conclusion is:
+
+- **The baseline wins validation.** Rents rose by only $12, $12, and $1 during 2019–2021, so predicting the previous year's rent produces an MAE of $8.33. This relatively flat validation period rewards small predicted changes.
+- **Population helps only against the shorter-history regression on test MAE.** It reduces error from $89.91 to $83.75 (6.85%), but remains above the baseline's $81.75. Its validation error is also much higher than the existing regression's.
+- **There is very little training data.** The full model estimates four coefficients and an intercept from seven initial training observations. It is refitted on ten observations before test evaluation. This creates a risk of unstable estimates and overfitting, but the current results alone do not prove that either is the cause.
+- **The fair comparison sacrifices history.** Unemployment starts in 2011, so all candidates start in 2012 after lagging. The original regression uses more history and achieves $62.06 test MAE; its stronger result should not be attributed to excluding economic variables alone.
+
+The baseline is the selected candidate **within this experiment**. The existing production forecast remains unchanged; these exploratory results do not trigger automatic model replacement.
+
+### Next experiment: use more available history
+
+Prioritize longer comparable history before adding more predictors or model complexity:
+
+1. Compare the naive baseline, rent-and-vacancy regression, and population-growth regression using the existing population data. Growth plus a one-year lag permits prediction rows from **2003**, giving **16 training observations (2003–2018)**. Keep validation at 2019–2021 and evaluation at 2022–2025, with identical rows across these three candidates.
+2. Investigate earlier unemployment coverage. The current export names archived table **14-10-0385** as its predecessor, but its suitability has not yet been verified. Check annual frequency, Edmonton CMA boundaries, age/gender definitions, and overlapping values before combining series.
+3. Use year-by-year errors and coefficient-stability checks to interpret the expanded experiments. Consider regularization afterward if estimates remain unstable.
+
+These are planned steps, not completed results. More history may improve stability but does not guarantee lower error. Reusing the already-inspected evaluation period remains exploratory, and interpolating or repeating annual rent values would not create independent observations.
+
+### Saved results and interpretation
+
+Outputs are isolated in `data/model/results/economic/`:
+
+- `model_comparison.csv`: validation/test metrics, selection flag, and percentage MAE improvement.
+- `test_predictions.csv`: each candidate's actual rents, predictions and absolute errors for each test year.
+- `model_summary.json`: feature sets, split years and counts, selection, metrics, evaluation-fit coefficients/intercepts, and limitations. Baseline parameters are null.
+
+Metrics use unrounded predictions. Improvement is `100 × (reference MAE − candidate MAE) / reference MAE`; it is null when reference MAE is zero. Coefficients describe the models refitted through 2021, not production forecasts. No replacement 2026 forecast is generated.
+
+**Limits:** Seven initial observations are very few for up to four predictors. The test period has already been inspected in earlier work, so this is exploratory historical evidence rather than an untouched final assessment. Current exports include revisions and do not establish information availability at each historical forecast date. Coefficients are associations, not causal effects.
+
+**Verification:** 79 tests and Ruff pass, including lag alignment, invalid data, validation-only selection when the test winner differs, tie-breaking, zero-reference handling, reproducible artifacts, side-effect-free imports, and compatibility with the original forecast and dashboard.
+
 ## Roadmap
 
-- Engineer population-growth and unemployment lag features from the integrated master dataset, then test whether they improve accuracy compared with the current model
+- Run the longer-history population comparison (2003–2018 training) and investigate comparable earlier unemployment data before promoting a richer regression
 - Add prediction intervals and walk-forward (rolling-origin) validation
 - Show the 2026 forecast and model accuracy in the Streamlit dashboard
 - Extend to **Calgary**. Vacancy data is already collected, and rent needs a matching export

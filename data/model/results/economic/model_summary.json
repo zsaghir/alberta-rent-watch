@@ -1,0 +1,166 @@
+{
+  "selected_model": "baseline",
+  "feature_sets": {
+    "baseline": [
+      "rent_lag1"
+    ],
+    "existing_regression": [
+      "rent_lag1",
+      "vacancy_lag1"
+    ],
+    "population_regression": [
+      "rent_lag1",
+      "vacancy_lag1",
+      "population_growth_lag1"
+    ],
+    "unemployment_regression": [
+      "rent_lag1",
+      "vacancy_lag1",
+      "unemployment_lag1"
+    ],
+    "full_regression": [
+      "rent_lag1",
+      "vacancy_lag1",
+      "population_growth_lag1",
+      "unemployment_lag1"
+    ]
+  },
+  "splits": {
+    "train": {
+      "years": [
+        2012,
+        2013,
+        2014,
+        2015,
+        2016,
+        2017,
+        2018
+      ],
+      "row_count": 7
+    },
+    "validation": {
+      "years": [
+        2019,
+        2020,
+        2021
+      ],
+      "row_count": 3
+    },
+    "evaluation_fit": {
+      "years": [
+        2012,
+        2013,
+        2014,
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021
+      ],
+      "row_count": 10
+    },
+    "test": {
+      "years": [
+        2022,
+        2023,
+        2024,
+        2025
+      ],
+      "row_count": 4
+    }
+  },
+  "evaluation_parameters": {
+    "baseline": {
+      "coefficients": null,
+      "intercept": null
+    },
+    "existing_regression": {
+      "coefficients": {
+        "rent_lag1": 0.8125151907130289,
+        "vacancy_lag1": -7.154942667096142
+      },
+      "intercept": 278.83427092984437
+    },
+    "population_regression": {
+      "coefficients": {
+        "rent_lag1": 0.716669626308309,
+        "vacancy_lag1": 1.391186432704088,
+        "population_growth_lag1": 30.67764166927365
+      },
+      "intercept": 291.17180270665335
+    },
+    "unemployment_regression": {
+      "coefficients": {
+        "rent_lag1": 0.794210557307401,
+        "vacancy_lag1": -10.847513439780496,
+        "unemployment_lag1": 5.223269384668961
+      },
+      "intercept": 281.45771230278774
+    },
+    "full_regression": {
+      "coefficients": {
+        "rent_lag1": 0.6922533412868388,
+        "vacancy_lag1": -2.0960981744347333,
+        "population_growth_lag1": 32.26008616633316,
+        "unemployment_lag1": 5.556461230262543
+      },
+      "intercept": 294.5989999331314
+    }
+  },
+  "comparison": [
+    {
+      "model": "baseline",
+      "validation_mae": 8.333333333333334,
+      "test_mae": 81.75,
+      "test_rmse": 89.40218118144546,
+      "test_r2": 0.38825532891967396,
+      "selected": true,
+      "mae_improvement_pct": 9.07635363368571
+    },
+    {
+      "model": "existing_regression",
+      "validation_mae": 11.982851273954642,
+      "test_mae": 89.91060441047932,
+      "test_rmse": 95.4999485440651,
+      "test_r2": 0.30196011083241503,
+      "selected": false,
+      "mae_improvement_pct": 0.0
+    },
+    {
+      "model": "population_regression",
+      "validation_mae": 63.71683015307826,
+      "test_mae": 83.75339533144137,
+      "test_rmse": 87.81303193880959,
+      "test_r2": 0.4098099132611539,
+      "selected": false,
+      "mae_improvement_pct": 6.848145576830664
+    },
+    {
+      "model": "unemployment_regression",
+      "validation_mae": 93.72550168132875,
+      "test_mae": 90.55320513078175,
+      "test_rmse": 96.02910942791746,
+      "test_r2": 0.2942030647492292,
+      "selected": false,
+      "mae_improvement_pct": -0.7147107112846065
+    },
+    {
+      "model": "full_regression",
+      "validation_mae": 66.7458402322806,
+      "test_mae": 84.11938023205323,
+      "test_rmse": 89.12146241919274,
+      "test_r2": 0.3920909981450703,
+      "selected": false,
+      "mae_improvement_pct": 6.441091366694349
+    }
+  ],
+  "limitations": [
+    "Only seven initial training observations; four test observations.",
+    "The 2022\u20132025 test period has already been inspected in previous work.",
+    "Revised exports do not recreate information available at historical forecast dates.",
+    "This matching-period comparison uses less training history than the original model.",
+    "Coefficients describe associations, not causal effects."
+  ]
+}
