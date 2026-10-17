@@ -144,13 +144,88 @@ def test_tie_break_and_zero_reference(tmp_path):
     json.loads((tmp_path / "results/model_summary.json").read_text())
 
 
+def assert_json_matches(actual, expected):
+    """Keep structure exact, allowing only tiny floating-point differences."""
+    if isinstance(expected, dict):
+        assert isinstance(actual, dict)
+        assert actual.keys() == expected.keys()
+        for key in expected:
+            assert_json_matches(actual[key], expected[key])
+    elif isinstance(expected, list):
+        assert isinstance(actual, list)
+        assert len(actual) == len(expected)
+        for actual_item, expected_item in zip(actual, expected):
+            assert_json_matches(actual_item, expected_item)
+    elif isinstance(expected, float):
+        assert isinstance(actual, float)
+        assert actual == pytest.approx(expected, rel=1e-10, abs=1e-9)
+    else:
+        assert type(actual) is type(expected)
+        assert actual == expected
+
+
+def assert_artifact_matches(actual_path, expected_path):
+    # Mac and Linux linear algebra can differ in the last decimal places.
+    if actual_path.suffix == ".json":
+        assert_json_matches(
+            json.loads(actual_path.read_text()),
+            json.loads(expected_path.read_text()),
+        )
+    else:
+        actual = pd.read_csv(actual_path)
+        expected = pd.read_csv(expected_path)
+        assert actual.columns.tolist() == expected.columns.tolist()
+        for column in expected:
+            pd.testing.assert_series_equal(
+                actual[column],
+                expected[column],
+                check_exact=not pd.api.types.is_float_dtype(expected[column]),
+                rtol=1e-10,
+                atol=1e-9,
+            )
+
+
+def test_artifact_comparison_accepts_roundoff_but_rejects_changed_results(tmp_path):
+    expected = {
+        "selected": True,
+        "year": 2025,
+        "model": "baseline",
+        "mae": 89.91060441047932,
+    }
+    assert_json_matches({**expected, "mae": 89.9106044104796}, expected)
+    for change in (
+        {"mae": 90.0},
+        {"selected": False},
+        {"year": 2024},
+        {"model": "full_regression"},
+    ):
+        with pytest.raises(AssertionError):
+            assert_json_matches({**expected, **change}, expected)
+
+    expected_path = tmp_path / "expected.csv"
+    actual_path = tmp_path / "actual.csv"
+    frame = pd.DataFrame([expected])
+    frame.to_csv(expected_path, index=False)
+    frame.assign(mae=89.9106044104796).to_csv(actual_path, index=False)
+    assert_artifact_matches(actual_path, expected_path)
+    for change in (
+        {"mae": 90.0},
+        {"selected": False},
+        {"year": 2024},
+        {"model": "full_regression"},
+    ):
+        frame.assign(**change).to_csv(actual_path, index=False)
+        with pytest.raises(AssertionError):
+            assert_artifact_matches(actual_path, expected_path)
+
+
 def test_reproducibility_and_existing_artifacts(tmp_path):
     build_model_data(output_path=tmp_path / "original.csv")
     assert (tmp_path / "original.csv").read_bytes() == (
         ROOT / "data/model/edmonton_2br_model.csv"
     ).read_bytes()
     build_economic_model_data(output_path=tmp_path / "economic.csv")
-    assert (tmp_path / "economic.csv").read_bytes() == MODEL_DATA_PATH.read_bytes()
+    assert_artifact_matches(tmp_path / "economic.csv", MODEL_DATA_PATH)
     result = train_model()
     save_results(result, tmp_path / "one")
     save_results(result, tmp_path / "two")
@@ -162,17 +237,19 @@ def test_reproducibility_and_existing_artifacts(tmp_path):
         assert (tmp_path / "one" / filename).read_bytes() == (
             tmp_path / "two" / filename
         ).read_bytes()
-        assert (tmp_path / "one" / filename).read_bytes() == (
-            ROOT / "data/model/results/economic" / filename
-        ).read_bytes()
+        assert_artifact_matches(
+            tmp_path / "one" / filename,
+            ROOT / "data/model/results/economic" / filename,
+        )
     from models.train_model import save_results as save_original
     from models.train_model import train_model as train_original
 
     save_original(train_original(), tmp_path / "original")
     for filename in ("model_summary.json", "test_predictions.csv"):
-        assert (tmp_path / "original" / filename).read_bytes() == (
-            ROOT / "data/model/results" / filename
-        ).read_bytes()
+        assert_artifact_matches(
+            tmp_path / "original" / filename,
+            ROOT / "data/model/results" / filename,
+        )
 
 
 def test_import_has_no_side_effects(tmp_path):
