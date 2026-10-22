@@ -1,0 +1,138 @@
+{
+  "selected_model": "baseline",
+  "feature_sets": {
+    "baseline": [
+      "rent_lag1"
+    ],
+    "existing_regression": [
+      "rent_lag1",
+      "vacancy_lag1"
+    ],
+    "population_regression": [
+      "rent_lag1",
+      "vacancy_lag1",
+      "population_growth_lag1"
+    ]
+  },
+  "splits": {
+    "train": {
+      "years": [
+        2003,
+        2004,
+        2005,
+        2006,
+        2007,
+        2008,
+        2009,
+        2010,
+        2011,
+        2012,
+        2013,
+        2014,
+        2015,
+        2016,
+        2017,
+        2018
+      ],
+      "row_count": 16
+    },
+    "validation": {
+      "years": [
+        2019,
+        2020,
+        2021
+      ],
+      "row_count": 3
+    },
+    "evaluation_fit": {
+      "years": [
+        2003,
+        2004,
+        2005,
+        2006,
+        2007,
+        2008,
+        2009,
+        2010,
+        2011,
+        2012,
+        2013,
+        2014,
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021
+      ],
+      "row_count": 19
+    },
+    "test": {
+      "years": [
+        2022,
+        2023,
+        2024,
+        2025
+      ],
+      "row_count": 4
+    }
+  },
+  "evaluation_parameters": {
+    "baseline": {
+      "coefficients": null,
+      "intercept": null
+    },
+    "existing_regression": {
+      "coefficients": {
+        "rent_lag1": 0.9745780705526491,
+        "vacancy_lag1": -11.788744720044992
+      },
+      "intercept": 100.32183839121376
+    },
+    "population_regression": {
+      "coefficients": {
+        "rent_lag1": 0.9551103623617742,
+        "vacancy_lag1": -4.208765683338833,
+        "population_growth_lag1": 32.75174397788326
+      },
+      "intercept": 19.188834335516503
+    }
+  },
+  "comparison": [
+    {
+      "model": "baseline",
+      "validation_mae": 8.333333333333334,
+      "test_mae": 81.75,
+      "test_rmse": 89.40218118144546,
+      "test_r2": 0.38825532891967396,
+      "selected": true,
+      "mae_improvement_pct": -26.884241038117846
+    },
+    {
+      "model": "existing_regression",
+      "validation_mae": 11.930973184675016,
+      "test_mae": 64.42880481543892,
+      "test_rmse": 67.83126787737041,
+      "test_r2": 0.6478450191839897,
+      "selected": false,
+      "mae_improvement_pct": 0.0
+    },
+    {
+      "model": "population_regression",
+      "validation_mae": 24.10966465008255,
+      "test_mae": 63.77772843090918,
+      "test_rmse": 66.59118365388638,
+      "test_r2": 0.6606034410909936,
+      "selected": false,
+      "mae_improvement_pct": 1.0105361823718462
+    }
+  ],
+  "limitations": [
+    "Only sixteen initial training observations; four test observations.",
+    "The 2022\u20132025 test period has already been inspected in previous work.",
+    "Revised exports do not recreate information available at historical forecast dates.",
+    "This matching-period comparison uses less training history than the original model.",
+    "Coefficients describe associations, not causal effects."
+  ]
+}

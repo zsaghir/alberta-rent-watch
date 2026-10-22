@@ -62,7 +62,7 @@ The main research question is whether public rental, population, economic, and h
 | Model-ready dataset with lag features | Done | `data/model/edmonton_2br_model.csv` (25 rows) |
 | Model training, selection, testing, and 2026 forecast | Done | `src/models/train_model.py` and `data/model/results/` |
 | Notebooks | Done | Data checking, EDA, and forecasting notebooks all run from a fresh kernel with outputs saved |
-| Automated tests | Done | 79 tests pass, and CI runs them with `ruff` on every push |
+| Automated tests | Done | 94 tests pass, and CI runs them with `ruff` on every push |
 | Population and unemployment used as model features | Done (experiment) | Five candidates compared on shared years; original production forecast retained |
 | Forecast shown in the dashboard | Not started | Dashboard shows history only |
 | Calgary coverage | Not started | Calgary vacancy data is already in the raw vacancy file |
@@ -390,7 +390,7 @@ alberta-rent-watch/
 ├── scripts/
 │   └── make_readme_charts.py      Regenerates the charts in docs/images/
 ├── docs/images/                   README figures and dashboard screenshot
-├── tests/                         pytest suite (79 tests)
+├── tests/                         pytest suite (94 tests)
 └── website/                       Reserved for a future static site
 ```
 
@@ -456,7 +456,7 @@ To update the data, download new CSVs from the Statistics Canada tables listed a
 ## Tests and quality checks
 
 ```bash
-uv run pytest -q          # 79 passed
+uv run pytest -q          # 94 passed
 uv run ruff check .       # All checks passed (includes notebooks)
 ```
 
@@ -548,7 +548,7 @@ The evidence behind this conclusion is:
 
 The baseline is the selected candidate **within this experiment**. The existing production forecast remains unchanged; these exploratory results do not trigger automatic model replacement.
 
-### Next experiment: use more available history
+### Follow-up experiments: use more available history
 
 Prioritize longer comparable history before adding more predictors or model complexity:
 
@@ -556,7 +556,7 @@ Prioritize longer comparable history before adding more predictors or model comp
 2. Investigate earlier unemployment coverage. The current export names archived table **14-10-0385** as its predecessor, but its suitability has not yet been verified. Check annual frequency, Edmonton CMA boundaries, age/gender definitions, and overlapping values before combining series.
 3. Use year-by-year errors and coefficient-stability checks to interpret the expanded experiments. Consider regularization afterward if estimates remain unstable.
 
-These are planned steps, not completed results. More history may improve stability but does not guarantee lower error. Reusing the already-inspected evaluation period remains exploratory, and interpolating or repeating annual rent values would not create independent observations.
+The population comparison is now complete (see below); the unemployment extension remains unresolved. More history may improve stability but does not guarantee lower error. Reusing the already-inspected evaluation period remains exploratory, and interpolating or repeating annual rent values would not create independent observations.
 
 ### Saved results and interpretation
 
@@ -572,9 +572,42 @@ Metrics use unrounded predictions. Improvement is `100 × (reference MAE − can
 
 **Verification:** 79 tests and Ruff pass, including lag alignment, invalid data, validation-only selection when the test winner differs, tie-breaking, zero-reference handling, reproducible artifacts, side-effect-free imports, and compatibility with the original forecast and dashboard.
 
+## Longer-history population experiment
+
+Run:
+
+```bash
+uv run python src/data/build_model_data.py
+uv run python src/models/train_population_models.py
+```
+
+The feature builder now also saves `data/model/edmonton_2br_population_model.csv`: **23 observations, 2003–2025**, with rent, vacancy, population, population growth, and lagged rent, vacancy and population growth. It does not require unemployment. Growth first becomes available in 2002 and its lag in 2003; missing observations are rejected rather than filled.
+
+The three candidates share **16 training years (2003–2018)**, three validation years (2019–2021), and four test years (2022–2025). Regressions are refitted through 2021 (19 observations) before evaluation. Both experiments use the same shared comparison implementation; the original economic interface and results are preserved.
+
+| Candidate | Validation MAE | Test MAE |
+|---|---:|---:|
+| Naive baseline (validation-selected) | $8.33 | $81.75 |
+| Rent + vacancy | $11.93 | $64.43 |
+| Add population growth | $24.11 | $63.78 |
+
+Population improves test MAE by approximately **$0.65 (1.01%)** relative to the regression trained on the same history, but worsens validation error. Both regressions beat the baseline on test MAE; **the baseline still wins the predefined validation selection**. This modest test improvement does not justify selecting a model after inspecting test results.
+
+The longer-history regressions perform better on this test period than their 2012-start counterparts, but different historical periods are not a controlled guarantee that more data always helps. Three validation and four already-inspected test years remain a small, exploratory evaluation. Revised source data does not reconstruct real-time availability.
+
+Results are saved separately in `data/model/results/population/` as `model_comparison.csv`, `test_predictions.csv`, and `model_summary.json`. No production forecast or dashboard is replaced.
+
+**Verification (October 21, 2026):** 94 tests and Ruff pass, including population lag alignment, independence from unemployment, validation-only selection, shared economic-result compatibility, and existing forecast/dashboard checks. Numerical artifact comparisons allow only tiny floating-point differences across platforms.
+
+### Earlier unemployment investigation
+
+The official archived table **14-10-0096-01** is a candidate for earlier observations. On October 21, 2026, the official page/download routes returned HTML instead of a valid data export. **Earlier values, an overlap comparison, and compatibility are therefore not yet verified.** No archived values have been merged.
+
+See [the source assessment](docs/unemployment_history_assessment.md) for URLs, required filters, retrieval attempts, unresolved boundary/revision questions, and the exact follow-up checks. A combined start in 2003 is conditional on compatible unemployment for 2002; if suitable coverage begins in 2003, the prediction start would be 2004.
+
 ## Roadmap
 
-- Run the longer-history population comparison (2003–2018 training) and investigate comparable earlier unemployment data before promoting a richer regression
+- Retrieve and assess earlier unemployment data when the official archive is accessible; the longer-history population comparison is complete
 - Add prediction intervals and walk-forward (rolling-origin) validation
 - Show the 2026 forecast and model accuracy in the Streamlit dashboard
 - Extend to **Calgary**. Vacancy data is already collected, and rent needs a matching export

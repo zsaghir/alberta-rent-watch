@@ -19,6 +19,16 @@ ECONOMIC_FEATURES = [*LAG_COLUMNS, "population_growth_lag1", "unemployment_lag1"
 ECONOMIC_COLUMNS = [*ECONOMIC_MASTER_COLUMNS, "population_growth", *ECONOMIC_FEATURES]
 
 
+POPULATION_OUTPUT_PATH = OUTPUT_PATH.with_name("edmonton_2br_population_model.csv")
+POPULATION_MASTER_COLUMNS = [*MASTER_COLUMNS, "population"]
+POPULATION_COLUMNS = [
+    *POPULATION_MASTER_COLUMNS,
+    "population_growth",
+    *LAG_COLUMNS,
+    "population_growth_lag1",
+]
+
+
 def add_lag_features(master: pd.DataFrame) -> pd.DataFrame:
     """Add prior-year rent and vacancy and drop the year without a prior year."""
     missing_columns = [
@@ -109,12 +119,73 @@ def build_economic_model_data(
     return result
 
 
+def add_population_features(master: pd.DataFrame) -> pd.DataFrame:
+    """Create population predictors without filling gaps or using future years."""
+    missing = [column for column in POPULATION_MASTER_COLUMNS if column not in master]
+    if missing:
+        raise ValueError(f"Missing required columns: {missing}")
+    ordered = (
+        master[POPULATION_MASTER_COLUMNS].sort_values("year").reset_index(drop=True)
+    )
+    if ordered["year"].tolist() != list(range(2000, 2026)):
+        raise ValueError("Master years must be unique and consecutive from 2000–2025")
+    for column in POPULATION_MASTER_COLUMNS:
+        if not pd.api.types.is_numeric_dtype(ordered[column]):
+            raise ValueError(f"{column} must be numeric")
+    for column, start in (
+        ("average_rent", 2000),
+        ("vacancy_rate", 2000),
+        ("population", 2001),
+    ):
+        covered = ordered.loc[ordered["year"] >= start, column]
+        if not np.isfinite(covered.to_numpy()).all():
+            raise ValueError(f"Missing or non-finite {column} within coverage")
+        if ordered.loc[ordered["year"] < start, column].notna().any():
+            raise ValueError(f"{column} must be missing before {start}")
+    if (ordered["population"].dropna() <= 0).any():
+        raise ValueError("Population must be positive")
+
+    # Calculate growth first: growth in 2024 compares populations in 2023 and 2024.
+    ordered["population_growth"] = (
+        ordered["population"] / ordered["population"].shift(1) - 1
+    ) * 100
+    # Shift inputs so predicting 2025 uses observations from 2024.
+    for source, target in (
+        ("average_rent", "rent_lag1"),
+        ("vacancy_rate", "vacancy_lag1"),
+        ("population_growth", "population_growth_lag1"),
+    ):
+        ordered[target] = ordered[source].shift(1)
+
+    # Population begins in 2001; growth is first known for 2002, then lagged to 2003.
+    result = ordered.loc[ordered["year"] >= 2003, POPULATION_COLUMNS].reset_index(
+        drop=True
+    )
+    if not np.isfinite(result.to_numpy()).all():
+        raise ValueError("Population dataset contains missing or non-finite values")
+    return result
+
+
+def build_population_model_data(
+    master_path: Path = MASTER_PATH,
+    output_path: Path = POPULATION_OUTPUT_PATH,
+) -> pd.DataFrame:
+    """Save a separate population dataset, preserving the original model data."""
+    result = add_population_features(pd.read_csv(master_path))
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    result.to_csv(output_path, index=False)
+    return result
+
+
 def main() -> None:
-    """Build both model datasets from the same master history."""
+    """Build the three model datasets from the same master history."""
     result = build_model_data()
     print(f"Created {OUTPUT_PATH} with {len(result)} model-ready rows.")
     economic = build_economic_model_data()
     print(f"Created {ECONOMIC_OUTPUT_PATH} with {len(economic)} economic rows.")
+    population = build_population_model_data()
+    print(f"Created {POPULATION_OUTPUT_PATH} with {len(population)} population rows.")
 
 
 if __name__ == "__main__":
