@@ -625,3 +625,15 @@ The code is released under the [MIT License](LICENSE).
 - Statistics Canada. Table 14-10-0461-01, *Labour force characteristics by census metropolitan area, annual*.
 
 The CMHC data is provided under the [CMHC Licence Agreement for the Use of Data](https://www.cmhc-schl.gc.ca/about-us/terms-conditions/hmip-terms-conditions). Statistics Canada data is used under the [Statistics Canada Open Licence](https://www.statcan.gc.ca/en/reference/licence).
+
+## Local SQLite database
+
+Build a queryable copy of the existing validated outputs:
+
+```bash
+uv run python src/data/build_database.py
+```
+
+The generated `data/database/rent_watch.sqlite` contains `rental_history`, `model_runs`, `model_predictions`, `forecasts`, and `dataset_metadata`. Experiment IDs and training periods keep comparisons distinct; only the existing 2026 forecast is included.
+
+See [the database learning guide](docs/database_guide.md) for table relationships, example queries, and a walkthrough of the builder. Agent tools are not implemented yet.
