@@ -1,6 +1,7 @@
 """Check the schema tool without changing the real database."""
 
 import importlib
+import json
 import sqlite3
 
 import pytest
@@ -41,13 +42,35 @@ def test_returns_columns_and_metadata(schema_database):
         assert table["columns"]
         assert table["metadata"]
 
-    # Metadata tuple positions follow the SELECT columns in your tool.
+    # Metadata describes itself using field names, including numeric coverage bounds.
     rent_metadata = next(
-        row for row in result["rental_history"]["metadata"] if row[0] == "average_rent"
+        row
+        for row in result["rental_history"]["metadata"]
+        if row["column_name"] == "average_rent"
     )
-    assert rent_metadata[2] == "CAD/month"
-    assert rent_metadata[3] == "Edmonton CMA, Alberta"
-    assert rent_metadata[5:7] == (2000, 2025)
+    assert rent_metadata["unit"] == "CAD/month"
+    assert rent_metadata["geography"] == "Edmonton CMA, Alberta"
+    assert rent_metadata["coverage_start"] == 2000
+    assert rent_metadata["coverage_end"] == 2025
+    for table in result.values():
+        for row in table["metadata"]:
+            assert set(row) == {
+                "column_name",
+                "description",
+                "unit",
+                "geography",
+                "scope",
+                "coverage_start",
+                "coverage_end",
+                "notes",
+            }
+    table_notes = next(
+        row for row in result["rental_history"]["metadata"] if row["column_name"] == "*"
+    )
+    assert table_notes["coverage_start"] is None
+    assert table_notes["coverage_end"] is None
+    # The future LLM connection can serialize metadata directly as JSON.
+    assert json.loads(json.dumps(rent_metadata)) == rent_metadata
 
 
 def test_missing_database_raises_without_creating_file(tmp_path, monkeypatch):
@@ -58,7 +81,7 @@ def test_missing_database_raises_without_creating_file(tmp_path, monkeypatch):
     with pytest.raises(RuntimeError, match="unable to open database file") as error:
         schema_module.inspect_schema()
 
-    assert isinstance(error.value.__context__, sqlite3.OperationalError)
+    assert isinstance(error.value.__cause__, sqlite3.OperationalError)
     assert not missing_path.exists()
 
 
